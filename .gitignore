@@ -1,0 +1,11 @@
+data
+data_extra
+data_final_headings
+extracted_files
+venv
+__pycache__
+data/*
+lookup_cache.pkl
+pipeline/model
+models
+

@@ -1,0 +1,50 @@
+{
+  "title": "Application form for grant of LTC advance",
+  "outline": [
+    {
+      "level": "H1",
+      "text": "Application form for grant of LTC advance",
+      "page": 1
+    },
+    {
+      "level": "H2",
+      "text": "Name of the Government Servant",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Designation",
+      "page": 1
+    },
+    {
+      "level": "H1",
+      "text": "PAY + SI + NPA",
+      "page": 1
+    },
+    {
+      "level": "H2",
+      "text": "Whether permanent or temporary",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Home Town as recorded in the Service Book",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "S.No",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Name",
+      "page": 1
+    },
+    {
+      "level": "H3",
+      "text": "Age",
+      "page": 1
+    }
+  ]
+}
