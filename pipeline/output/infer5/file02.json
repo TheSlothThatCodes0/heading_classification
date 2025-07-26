@@ -22,6 +22,11 @@
       "page": 3
     },
     {
+      "level": "H3",
+      "text": "Version Date Remarks",
+      "page": 3
+    },
+    {
       "level": "H1",
       "text": "Table of Contents",
       "page": 4
@@ -62,6 +67,21 @@
       "page": 8
     },
     {
+      "level": "H3",
+      "text": "Syllabus Days",
+      "page": 8
+    },
+    {
+      "level": "H5",
+      "text": "Baseline: Foundation 3",
+      "page": 8
+    },
+    {
+      "level": "H5",
+      "text": "Extension: Agile Tester 2",
+      "page": 8
+    },
+    {
       "level": "H2",
       "text": "2.6 Keeping It Current",
       "page": 9
@@ -69,6 +89,11 @@
     {
       "level": "H2",
       "text": "3.1 Business Outcomes",
+      "page": 10
+    },
+    {
+      "level": "H4",
+      "text": "An Agile Tester can…",
       "page": 10
     },
     {
@@ -89,6 +114,11 @@
     {
       "level": "H2",
       "text": "4.2 Documents and Web Sites",
+      "page": 12
+    },
+    {
+      "level": "H3",
+      "text": "Identifier Reference",
       "page": 12
     }
   ]
