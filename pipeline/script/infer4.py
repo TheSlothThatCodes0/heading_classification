@@ -21,13 +21,6 @@ date_pattern = re.compile(r'\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|M
 footer_pattern = re.compile(r'(?i)page\s*\d+|^\d+\s+\d+\s+\d+\s+\d+$|version|copyright', flags=re.IGNORECASE)
 repeated_numbers = re.compile(r'^\d+(\s+\d+)+$')  # Pattern like "12 12" or "12 12 12 12"
 
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-# Simple regex patterns for obvious non-headings
-date_pattern = re.compile(r'\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}', re.IGNORECASE)
-footer_pattern = re.compile(r'(?i)page\s*\d+|^\d+\s+\d+\s+\d+\s+\d+$|version|copyright', flags=re.IGNORECASE)
-repeated_numbers = re.compile(r'^\d+(\s+\d+)+$')  # Pattern like "12 12" or "12 12 12 12"
-
 def is_bullet_point(text):
     """Simple bullet point detection"""
     return bool(re.match(r'^[•\-\*\+◦◆◇◈○●■□▪▫]\s', text))
@@ -231,11 +224,23 @@ def infer_pdf(pdf_path: Path):
     hdrs = hdrs[hdrs["num_words"] <= 15]
     
     # Rule 10: Remove copyright, version patterns, and incomplete sentences
-    copyright_pattern = re.compile(r'(?i)(?:copyright|version \d+|\d{4} page \d+|may \d+, \d{4}|and put ontario dollars to work for everyone)')
+    copyright_pattern = re.compile(r'(?i)(?:copyright|version \d+|\d{4} page \d+)')
     hdrs = hdrs[~hdrs["text"].str.contains(copyright_pattern, na=False)]
     
-    # Rule 11: Remove incomplete sentences and fragments
+    # Rule 11: Remove incomplete sentences and fragments  
     hdrs = hdrs[~hdrs["text"].str.endswith('.') | (hdrs["num_words"] <= 5)]  # Allow short text ending with periods
+    
+    # Rule 12: Filter out structural patterns (no content-specific words)
+    structural_noise_patterns = [
+        r'^\$\d+[MK]?\s+\$\d+[MK]?$',  # Money patterns like "$50M $75M"
+        r'\d{4}\s+\d{4}',  # Year patterns like "2007 2017"
+        r'^[A-Z\s]+\s+[A-Z\s]+\s+\d{4}\s+\d{4}$',  # Pattern like "FUNDING SOURCE 2007 2017"
+        r'^[A-Z\s]+\s+[A-Z\s]+$',  # Short all-caps phrases that are likely table headers
+        r'^result:\s+',  # Lines starting with "Result:" (likely table/list items)
+    ]
+    
+    for pattern in structural_noise_patterns:
+        hdrs = hdrs[~hdrs["text"].str.contains(pattern, na=False, regex=True)]
 
     # Final sort
     final = hdrs.sort_values(["page_num", "norm_y"])
