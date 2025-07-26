@@ -7,38 +7,8 @@
       "page": 1
     },
     {
-      "level": "H5",
-      "text": "Name of the Government Servant",
-      "page": 1
-    },
-    {
-      "level": "H3",
-      "text": "Designation",
-      "page": 1
-    },
-    {
-      "level": "H5",
-      "text": "Date of entering the Central Government",
-      "page": 1
-    },
-    {
-      "level": "H3",
-      "text": "Service",
-      "page": 1
-    },
-    {
-      "level": "H3",
-      "text": "PAY + SI + NPA",
-      "page": 1
-    },
-    {
-      "level": "H5",
-      "text": "Whether permanent or temporary",
-      "page": 1
-    },
-    {
-      "level": "H3",
-      "text": "Single rail fare/bus fare from the",
+      "level": "H1",
+      "text": "12. Amount of advance required.",
       "page": 1
     }
   ]

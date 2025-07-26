@@ -29,6 +29,17 @@ glue_pattern = re.compile(
     flags=re.IGNORECASE
 )
 
+def is_bullet_point(text):
+    """Detect bullet point lists that shouldn't be headings"""
+    # Check for bullet-like patterns (•, -, *, etc.)
+    bullet_pattern = re.compile(r'^[•\-\*\+◦◆◇◈○●■□▪▫]+\s')
+    if bullet_pattern.search(text):
+        return True
+    # Check for multiple bullet points in same text
+    if text.count('•') > 1 or text.count('●') > 1:
+        return True
+    return False
+
 def get_font_weight(font_name: str) -> int:
     if not font_name:
         return 0
@@ -135,6 +146,22 @@ def engineer_features(blocks):
     df["percent_digit"]      = df["text"].apply(
         lambda t: sum(c.isdigit() for c in t) / len(t) if t else 0
     )
+
+    # Add cover page detection
+    df["is_cover_page"] = (df["page_num"] == 1).astype(int)
+    
+    # Add position-based features for cover detection
+    df["is_upper_half"] = (df["norm_y"] < 0.5).astype(int)
+    df["is_very_top"] = (df["norm_y"] < 0.3).astype(int)
+
+    # Add improved bullet point detection
+    df["is_bullet_point"] = df["text"].apply(is_bullet_point).astype(bool)
+    
+    # Add a stricter "likely_body" detector
+    df["likely_body"] = ((df["num_words"] > 15) | 
+                        (df["text"].str.endswith('.')) | 
+                        (df["text"].str.contains(r'\b(?:and|the|that|with)\b', regex=True))).astype(bool)
+
     return df
 
 def infer_pdf(pdf_path: Path):
@@ -144,17 +171,31 @@ def infer_pdf(pdf_path: Path):
     # Rule 0: drop trivial
     feats = feats[feats["text"].str.strip().str.len() > 3]
 
-    # Rule 0.5: ensure page‑1’s 3 largest always in
+    # Rule 0.5: ensure page‑1's largest fonts always protected
     p1 = feats[feats["page_num"] == 1]
     if not p1.empty:
-        top3 = p1.nlargest(3, "font_size")
-        feats = pd.concat([feats, top3]).drop_duplicates()
+        # Get top fonts by size (more than just 3)
+        top_fonts = p1.nlargest(min(5, len(p1)), "font_size")
+        # Also protect any very large fonts (>1.2x body)
+        large_fonts = p1[p1["relative_font_size"] > 1.2]
+        if not large_fonts.empty:
+            protected = pd.concat([top_fonts, large_fonts]).drop_duplicates()
+        else:
+            protected = top_fonts
+        # Only concat if we have new items to add
+        new_items = protected[~protected.index.isin(feats.index)]
+        if not new_items.empty:
+            feats = pd.concat([feats, new_items])
 
-    # Rule 1: keep ≥1.0× or any numbered
-    feats = feats[
-        (feats["relative_font_size"] >= 1.0)
-        | (feats["numbering_depth"] > 0)
-    ]
+    # Rule 1: better filtering criteria - more restrictive
+    keep_mask = (
+        (feats["relative_font_size"] >= 1.1)  # More restrictive font size threshold
+        | ((feats["numbering_depth"] > 0) & ~feats["is_bullet_point"] & (feats["relative_font_size"] >= 1.0))  # Numbered sections with decent font
+        | ((feats["page_num"] == 1) & (feats["relative_font_size"] >= 1.05))  # Page 1 content with larger font
+        | ((feats["text"].str.strip().str.endswith(':')) & (feats["num_words"] < 6) & (feats["relative_font_size"] >= 1.0))  # Section headers with colon
+        | (feats["is_all_caps"] & (feats["num_words"] <= 4) & (feats["relative_font_size"] >= 1.0))  # Short all-caps headings
+    )
+    feats = feats[keep_mask]
     if feats.empty:
         return {"title": "", "outline": []}
 
@@ -199,24 +240,102 @@ def infer_pdf(pdf_path: Path):
     )
     hdrs = hdrs[~noise].drop(['page_count','y_min','y_max'], axis=1)
 
-    # Rule 5: sentence/body filters, glue only on long lines
+    # Rule 5: sentence/body filters with improved protection for real headings
     hdrs = hdrs[~hdrs["text"].str.match(date_pattern)]
     hdrs = hdrs[~hdrs["text"].str.match(footer_pattern)]
     hdrs = hdrs[~hdrs["text"].str.fullmatch(r"\d+")]
-    long_lines = hdrs["num_words"] > 7
-    hdrs = hdrs[~(long_lines & hdrs["text"].str.contains(glue_pattern))]
-    hdrs = hdrs[~hdrs["text"].str.match(r"^[a-z]")]
-    hdrs = hdrs[~hdrs["text"].str.endswith(".")]
+    
+    # Rule 5.1: More aggressively filter bullet points except key section names
+    bullet_filter = hdrs["is_bullet_point"] & ~(hdrs["text"].str.contains(r':(?:\s*)?$', regex=True))
+    hdrs = hdrs[~bullet_filter]
+    
+    # Rule 5.2: Protect headings with colon endings (likely section headers)
+    colon_headers = hdrs["text"].str.match(r'^[^\.]+:\s*$', na=False)
+    
+    # Rule 5.3: Filter body-like text more aggressively
+    try:
+        body_text_filter = (
+            hdrs["likely_body"] &
+            (hdrs["num_words"] > 10) &
+            ~colon_headers &
+            ~((hdrs["page_num"] == 1) & (hdrs["relative_font_size"] > 1.3))
+        )
+        hdrs = hdrs[~body_text_filter]
+    except Exception as e:
+        print(f"Warning: Rule 5.3 failed: {e}")
+        # Fall back to simpler filtering
+        hdrs = hdrs[~hdrs["likely_body"] | (hdrs["num_words"] <= 10)]
+    
+    # Rule 5.4: Fix heading levels to prefer H1-H3 over H4-H6 for main headings
+    # This aligns more with expected output's hierarchy
+    try:
+        numbered_headings = hdrs["text"].str.match(r'^\d+\.', na=False) 
+        mask1 = hdrs["predicted_level"].isin(["H4", "H5", "H6"]) & colon_headers
+        mask2 = hdrs["predicted_level"].isin(["H5", "H6"]) & numbered_headings
+        
+        hdrs.loc[mask1, "predicted_level"] = "H3"
+        hdrs.loc[mask2, "predicted_level"] = "H3"
+    except Exception as e:
+        print(f"Warning: Rule 5.4 failed: {e}")
+        pass
+    
+    # Rule 6: Additional structural filtering
+    # Filter out very similar/duplicate headings on the same page
+    hdrs['text_lower'] = hdrs['text'].str.lower().str.strip()
+    page_text_counts = hdrs.groupby(['page_num', 'text_lower']).size()
+    duplicate_mask = hdrs.set_index(['page_num', 'text_lower']).index.isin(
+        page_text_counts[page_text_counts > 1].index
+    )
+    
+    # Keep only the first occurrence of duplicates within each page
+    hdrs = hdrs[~duplicate_mask | ~hdrs.duplicated(['page_num', 'text_lower'])]
+    hdrs = hdrs.drop('text_lower', axis=1)
+    
+    # Rule 7: Filter very short non-meaningful text
+    hdrs = hdrs[~((hdrs['num_words'] == 1) & (hdrs['text_length'] < 4) & ~hdrs['is_all_caps'])]
+
+    # Keep existing filters
     hdrs = hdrs[hdrs["percent_punct"] < 0.4]
-    hdrs = hdrs[~hdrs["text"].str.match(r"^\d+\s+\d+$")]
+    hdrs = hdrs[~hdrs["text"].str.match(r"^\d+\s+\d+$", na=False)]
     hdrs = hdrs[hdrs["percent_digit"] < 0.5]
 
     # Final sort and JSON build
     final = hdrs.sort_values(["page_num","norm_y"])
+    
+    # Better title selection with cleaning
     p1f = final[final["page_num"] == 1]
     if not p1f.empty:
-        mx = p1f["font_size"].max()
-        title = " ".join(p1f[p1f["font_size"] == mx]["text"])
+        # First try: find title candidates with large font
+        candidates = p1f[p1f["relative_font_size"] > 1.2]
+        
+        if candidates.empty:
+            # Fall back to top 3 items on page 1
+            candidates = p1f.head(3)
+        
+        # Choose title with best combination of font size and position
+        if len(candidates) > 1:
+            candidates = candidates.copy()  # Avoid SettingWithCopyWarning
+            candidates['title_score'] = (candidates['relative_font_size'] * 10) - candidates['norm_y']
+            best_candidate = candidates.loc[candidates['title_score'].idxmax()]
+        else:
+            best_candidate = candidates.iloc[0]
+        
+        # Clean OCR artifacts from title more aggressively
+        title_text = best_candidate["text"]
+        # Remove repeated character patterns like "RFP: RFP:" 
+        title = re.sub(r'\b(\w+):\s+\1:', r'\1:', title_text)
+        # Remove spaced out letters like "R quest f r Pr oposal"
+        title = re.sub(r'([A-Z])\s+([a-z])\s+([A-Z])', r'\1\2\3', title)
+        # Remove repeated words
+        words = title.split()
+        seen = set()
+        clean_words = []
+        for word in words:
+            if word.lower() not in seen or len(word) > 3:
+                clean_words.append(word)
+                seen.add(word.lower())
+        title = ' '.join(clean_words)
+        title = re.sub(r'\s{2,}', ' ', title).strip()
     else:
         title = final.iloc[0]["text"] if not final.empty else ""
 
