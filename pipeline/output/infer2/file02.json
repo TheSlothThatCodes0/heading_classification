@@ -1,11 +1,6 @@
 {
-  "title": "Overview",
+  "title": "Foundation Level Extensions",
   "outline": [
-    {
-      "level": "H1",
-      "text": "Overview",
-      "page": 1
-    },
     {
       "level": "H1",
       "text": "Foundation Level Extensions",
@@ -22,21 +17,6 @@
       "page": 1
     },
     {
-      "level": "H3",
-      "text": "Overview",
-      "page": 2
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 2
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 3
-    },
-    {
       "level": "H1",
       "text": "Revision History",
       "page": 3
@@ -45,16 +25,6 @@
       "level": "H3",
       "text": "Version",
       "page": 3
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 3
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 4
     },
     {
       "level": "H1",
@@ -73,43 +43,13 @@
     },
     {
       "level": "H2",
-      "text": "May 31, 2014",
-      "page": 4
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 5
-    },
-    {
-      "level": "H2",
       "text": "Acknowledgements",
       "page": 5
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 5
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 6
     },
     {
       "level": "H1",
       "text": "1. Introduction to the Foundation Level Extensions",
       "page": 6
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 6
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 7
     },
     {
       "level": "H1",
@@ -132,16 +72,6 @@
       "page": 7
     },
     {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 7
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 8
-    },
-    {
       "level": "H3",
       "text": "2.4 Entry Requirements",
       "page": 8
@@ -152,29 +82,9 @@
       "page": 8
     },
     {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 8
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 9
-    },
-    {
       "level": "H3",
       "text": "2.6 Keeping It Current",
       "page": 9
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 9
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 10
     },
     {
       "level": "H1",
@@ -195,26 +105,6 @@
       "level": "H3",
       "text": "3.2 Content",
       "page": 10
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 10
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 11
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
-      "page": 11
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 12
     },
     {
       "level": "H2",
@@ -239,11 +129,6 @@
     {
       "level": "H3",
       "text": "Identifier",
-      "page": 12
-    },
-    {
-      "level": "H2",
-      "text": "May 31, 2014",
       "page": 12
     }
   ]

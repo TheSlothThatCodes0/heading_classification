@@ -4,12 +4,13 @@ import json
 import pandas as pd
 import re
 from pathlib import Path
+from collections import Counter
 
 # --- Configuration ---
 SCRIPT_DIR = Path(__file__).resolve().parent
 PIPELINE_DIR = SCRIPT_DIR.parent
 INPUT_DIR = PIPELINE_DIR / "input"
-OUTPUT_DIR = PIPELINE_DIR / "output"
+OUTPUT_DIR = PIPELINE_DIR / "output/infer2"
 MODEL_DIR = PIPELINE_DIR / "model"
 MODEL_PATH = MODEL_DIR / "lgbm_model_medium.pkl"
 ENCODER_PATH = MODEL_DIR / "label_encoder_medium.pkl"
@@ -34,16 +35,16 @@ def parse_pdf_and_merge_lines(pdf_path):
                 for line in block['lines']:
                     line_text = " ".join([span['text'].strip() for span in line['spans'] if span['text'].strip()])
                     if not line_text: continue
-                    avg_size = sum(s['size'] for s in line['spans']) / len(line['spans'])
-                    font_name = line['spans'][0]['font']
-                    raw_lines.append({"text": line_text, "bbox": line['bbox'], "size": avg_size, "font": font_name, "page_num": page_num + 1, "page_width": page_width, "page_height": page_height})
+                    avg_size = sum(s['size'] for s in line['spans']) / len(line['spans']) if line['spans'] else 0
+                    font_name = line['spans'][0]['font'] if line['spans'] else ""
+                    raw_lines.append({ "text": line_text, "bbox": line['bbox'], "size": avg_size, "font": font_name, "page_num": page_num + 1, "page_width": page_width, "page_height": page_height })
         if not raw_lines: continue
         current_line = raw_lines[0]
         for i in range(1, len(raw_lines)):
             next_line = raw_lines[i]
             if (current_line['font'] == next_line['font'] and abs(current_line['size'] - next_line['size']) < 1 and
-                abs(next_line['bbox'][1] - current_line['bbox'][3]) < (current_line['size'] * 0.5) and
-                len(current_line['text'].split()) < 20):
+                abs(next_line['bbox'][1] - current_line['bbox'][3]) < (current_line['size'] * 0.8) and
+                len(current_line['text'].split()) + len(next_line['text'].split()) < 25):
                 current_line['text'] += " " + next_line['text']
                 new_bbox = (min(current_line['bbox'][0], next_line['bbox'][0]), min(current_line['bbox'][1], next_line['bbox'][1]), max(current_line['bbox'][2], next_line['bbox'][2]), max(current_line['bbox'][3], next_line['bbox'][3]))
                 current_line['bbox'] = new_bbox
@@ -61,7 +62,8 @@ def engineer_features(text_blocks):
     
     if not df.empty and len(df[df['text'].str.split().str.len() > 4]) > 0:
         body_size = df[df['text'].str.split().str.len() > 4]['font_size'].mode()[0]
-    else: body_size = 10.0
+    else:
+        body_size = 10.0
     
     df['font_weight'] = df['font_name'].apply(get_font_weight)
     df['x'] = df['bbox'].apply(lambda b: b[0]); df['y'] = df['bbox'].apply(lambda b: b[1])
@@ -72,10 +74,10 @@ def engineer_features(text_blocks):
     center_x = df['x'] + df['w'] / 2
     df['is_centered'] = (abs(center_x - df['page_width'] / 2) < (df['page_width'] * 0.15)).astype(int)
     
-    # --- ADDING REQUESTED FEATURES ---
     df['numbering_depth'] = df['text'].str.strip().apply(lambda x: len(re.match(r'^\d+(\.\d+)*', x).group(0).split('.')) if re.match(r'^\d+(\.\d+)*', x) else 0)
     df['relative_font_size'] = df['font_size'] / body_size
     df['percent_punct'] = df['text'].apply(lambda x: sum(1 for char in x if char in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~") / len(x) if x else 0)
+
     return df
 
 def main():
@@ -105,16 +107,35 @@ def main():
             ]
             
             X_predict = features_df[feature_columns]
+            
             predictions_numeric = model.predict(X_predict)
             features_df['predicted_level'] = label_encoder.inverse_transform(predictions_numeric)
             
             headings_df = features_df[features_df['predicted_level'].isin(['H1', 'H2', 'H3', 'H4', 'H5', 'H6'])].copy()
             
-            # Post-processing rules
-            headings_df = headings_df[headings_df['num_words'] < 20]
-            headings_df = headings_df[~headings_df['text'].str.strip().str.endswith(('.', ':', ','))]
-            headings_df = headings_df[~headings_df['text'].str.lower().str.contains('page\s*\d+')]
+            # --- NEW, AGGRESSIVE POST-PROCESSING FILTER ---
+            # Rule 1: Filter out text that looks like sentences or noise
+            headings_df = headings_df[headings_df['num_words'] < 15]
+            headings_df = headings_df[~headings_df['text'].str.strip().str.endswith(('.', ':'))]
             
+            # Rule 2: Filter out specific noise patterns like dates, page numbers, and bullet points
+            date_pattern = r'\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{1,2}-\d{1,2}|(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s\d{1,2},\s\d{4}'
+            page_num_pattern = r'^\s*(page|pages)?\s*\d+\s*$'
+            bullet_pattern = r'^\s*[•●-]\s+'
+            form_noise_pattern = r'(-|_|\.){4,}' # Catches '----'
+
+            headings_df = headings_df[~headings_df['text'].str.contains(date_pattern, regex=True, case=False)]
+            headings_df = headings_df[~headings_df['text'].str.lower().str.match(page_num_pattern)]
+            headings_df = headings_df[~headings_df['text'].str.match(bullet_pattern)]
+            headings_df = headings_df[~headings_df['text'].str.contains(form_noise_pattern, regex=True)]
+
+            # Rule 3: Remove headers/footers (text that repeats on multiple pages)
+            # This is more effective if we process all pages first, but for now, we'll use a simpler text counter
+            text_counts = headings_df['text'].value_counts()
+            repeated_text = text_counts[text_counts > 2].index.tolist()
+            if repeated_text:
+                headings_df = headings_df[~headings_df['text'].isin(repeated_text)]
+
             title = "Untitled Document"
             h1s = headings_df[headings_df['predicted_level'] == 'H1'].sort_values(by=['page_num', 'norm_y'])
             if not h1s.empty: title = h1s.iloc[0]['text']
