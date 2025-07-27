@@ -9,4 +9,5 @@ lookup_cache.pkl
 pipeline/model
 models
 cache
+data_binary_classification
 
