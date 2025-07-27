@@ -1,11 +1,6 @@
 {
-  "title": "Overview",
+  "title": "Foundation Level Extensions",
   "outline": [
-    {
-      "level": "H1",
-      "text": "Overview",
-      "page": 1
-    },
     {
       "level": "H1",
       "text": "Foundation Level Extensions",
@@ -18,23 +13,8 @@
     },
     {
       "level": "H3",
-      "text": "Overview",
-      "page": 2
-    },
-    {
-      "level": "H3",
-      "text": "Overview",
-      "page": 3
-    },
-    {
-      "level": "H3",
       "text": "Revision History",
       "page": 3
-    },
-    {
-      "level": "H4",
-      "text": "Overview",
-      "page": 4
     },
     {
       "level": "H3",
@@ -47,29 +27,14 @@
       "page": 4
     },
     {
-      "level": "H4",
-      "text": "Overview",
-      "page": 5
-    },
-    {
       "level": "H3",
       "text": "Acknowledgements",
       "page": 5
     },
     {
-      "level": "H4",
-      "text": "Overview",
-      "page": 6
-    },
-    {
       "level": "H3",
       "text": "1. Introduction to the Foundation Level Extensions",
       "page": 6
-    },
-    {
-      "level": "H4",
-      "text": "Overview",
-      "page": 7
     },
     {
       "level": "H3",
@@ -92,11 +57,6 @@
       "page": 7
     },
     {
-      "level": "H5",
-      "text": "Overview",
-      "page": 8
-    },
-    {
       "level": "H4",
       "text": "2.4 Entry Requirements",
       "page": 8
@@ -112,19 +72,9 @@
       "page": 8
     },
     {
-      "level": "H5",
-      "text": "Overview",
-      "page": 9
-    },
-    {
       "level": "H4",
       "text": "2.6 Keeping It Current",
       "page": 9
-    },
-    {
-      "level": "H5",
-      "text": "Overview",
-      "page": 10
     },
     {
       "level": "H3",
@@ -140,16 +90,6 @@
       "level": "H4",
       "text": "3.2 Content",
       "page": 10
-    },
-    {
-      "level": "H5",
-      "text": "Overview",
-      "page": 11
-    },
-    {
-      "level": "H5",
-      "text": "Overview",
-      "page": 12
     },
     {
       "level": "H3",

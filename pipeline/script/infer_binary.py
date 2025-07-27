@@ -111,11 +111,24 @@ def infer_pdf_binary(pdf_path: Path):
     blocks = parse_pdf_and_merge_lines_v2(pdf_path)
     feats = engineer_features(blocks)
     if feats.empty: return {'outline': []}
+    # Identify running header/footer texts (blocks in top 10% or bottom 10%)
+    hf = pd.concat([
+        feats[feats['norm_y'] < 0.1],
+        feats[feats['norm_y'] > 0.9]
+    ])
+    drop_texts = (
+        hf.groupby('text')['page_num']
+          .nunique()
+          .loc[lambda s: s > 3]
+          .index
+    )
     X = feats[FEATURE_COLS]
     if X.empty: return {'outline': []}
     preds = model.predict(X)
     feats['is_heading'] = preds
     hdrs = feats[feats['is_heading']==1].copy()
+    # Remove any candidate matching running headers/footers
+    hdrs = hdrs[~hdrs['text'].isin(drop_texts)]
     # rule-based false-positive removal
     hdrs = hdrs[hdrs['percent_punct']<0.4]
     hdrs = hdrs[~hdrs['text'].str.match(date_pattern, na=False)]
