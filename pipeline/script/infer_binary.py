@@ -130,16 +130,42 @@ def infer_pdf_binary(pdf_path: Path):
     if final.empty:
         return {'title': '', 'outline': []}
 
-    # Assign heading levels based on relative font size scaling
-    max_fs = final['relative_font_size'].max()
-    min_fs = final['relative_font_size'].min()
-    # Scale to levels 1-6: largest font -> H1, smallest -> H6
-    def compute_level(r):
-        if max_fs == min_fs:
-            return 1
-        lvl = round((max_fs - r['relative_font_size'])/(max_fs - min_fs)*5) + 1
-        return min(max(int(lvl), 1), 6)
-    final['level'] = final.apply(lambda r: f"H{compute_level(r)}", axis=1)
+    # Assign heading levels hierarchically based on relative font sizes
+    tol = 0.05  # relative_font_size tolerance for same level
+    levels = []
+    stack = []  # stores tuples of (level, relative_font_size)
+    for _, row in final.iterrows():
+        cur_fs = row['relative_font_size']
+        if not stack:
+            lvl = 1
+            stack.append((lvl, cur_fs))
+        else:
+            prev_lvl, prev_fs = stack[-1]
+            if cur_fs < prev_fs - tol:
+                lvl = min(prev_lvl + 1, 6)
+                stack.append((lvl, cur_fs))
+            elif abs(cur_fs - prev_fs) <= tol:
+                lvl = prev_lvl
+                stack[-1] = (lvl, cur_fs)
+            else:
+                # ascend to find matching or parent level
+                for i in range(len(stack) - 1, -1, -1):
+                    par_lvl, par_fs = stack[i]
+                    if abs(cur_fs - par_fs) <= tol:
+                        lvl = par_lvl
+                        stack = stack[:i+1]
+                        stack[-1] = (lvl, cur_fs)
+                        break
+                    elif cur_fs < par_fs - tol:
+                        lvl = min(par_lvl + 1, 6)
+                        stack = stack[:i+1]
+                        stack.append((lvl, cur_fs))
+                        break
+                else:
+                    lvl = 1
+                    stack = [(1, cur_fs)]
+        levels.append(f"H{lvl}")
+    final['level'] = levels
 
     # Title detection: top-level header on page 1
     title = ''
