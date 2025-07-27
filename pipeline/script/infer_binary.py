@@ -136,6 +136,10 @@ def infer_pdf_binary(pdf_path: Path):
     hdrs = hdrs[~hdrs['text'].str.match(repeated_numbers, na=False)]
     hdrs = hdrs[~hdrs['text'].apply(is_bullet_point)]
     hdrs = hdrs[~hdrs['text'].str.fullmatch(r'[A-Za-z]{1,2}', na=False)]
+    # Remove table-like rows: only if both multiple columns and many numbers
+    tbl_pattern = hdrs['text'].str.contains(r"\S+(?: {2,}\S+)+", regex=True)
+    num_pattern = hdrs['text'].str.count(r'\d+') > 2
+    hdrs = hdrs[~(tbl_pattern & num_pattern)]
     # Remove overly long headings (likely false positives)
     hdrs = hdrs[hdrs['num_words'] <= 15]
     # Sort by location
