@@ -23,7 +23,7 @@ PDFs power everything from research papers to user manuals, yet their visual lay
 
 ## Our Solution 💪
 
-We combine an open-source LightGBM binary classifier ([LightGBM](https://github.com/microsoft/LightGBM)), fine-tuned on the DocLayNet dataset, with spatial, typographic, and textual rules. Fine-tuning on DocLayNet enables robust, multilingual heading detection—for English, German, French, Japanese, and more—while preserving a lightweight (< 200 MB) model footprint.
+We combine an open-source LightGBM binary classifier ([LightGBM](https://github.com/microsoft/LightGBM)), fine-tuned on the DocLayNet(([FineTuned Model](https://github.com/microsoft/LightGBM))), with spatial, typographic, and textual rules. Fine-tuning on DocLayNet enables robust, multilingual heading detection—for English, German, French, Japanese, and more—while preserving a lightweight (< 200 MB) model footprint.
 
 ## Methodology 📝
 
