@@ -1,4 +1,4 @@
-````markdown
+
 # PDF Outline Extractor
 
 ## Inspiration 🌟
