@@ -5,8 +5,7 @@ extracted_files
 venv
 __pycache__
 data/*
-lookup_cache.pkl
-pipeline/model
+# pipeline/model
 models
 cache
 data_binary_classification
